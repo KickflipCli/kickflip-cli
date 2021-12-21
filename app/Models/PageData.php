@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Kickflip\Models;
 
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Kickflip\KickflipHelper;
 
@@ -83,6 +84,14 @@ class PageData implements PageInterface
         self::setOnInstanceFromFrontMatterIfNotNull($newPageData, $frontMatter,'section');
         self::setOnInstanceFromFrontMatterIfNotNull($newPageData, $frontMatter,'autoExtend');
 
+        # Register thin route for URL generating...
+        if ($url === '/') {
+            $routeName = 'index';
+        } else {
+            $routeName = (string) Str::of($url)->trim('/')->replace('/', '.');
+        }
+        Route::name($routeName)->get($newPageData->getUrl(), static fn() => '');
+
         return $newPageData;
     }
 
@@ -104,7 +113,7 @@ class PageData implements PageInterface
     public function getUrl(): string
     {
         $relUrl = KickflipHelper::relativeUrl($this->url);
-        if ($relUrl === '/' || KickflipHelper::config('prettyUrls', true) === true) {
+        if ($this->url === '/' || KickflipHelper::config('prettyUrls', true) === true) {
             return $relUrl;
         }
         return (string) Str::of($relUrl)->append('.html');

@@ -17,11 +17,10 @@ use Kickflip\KickflipHelper;
 use Kickflip\Logger;
 use Kickflip\Models\PageData;
 use Kickflip\Models\SiteData;
-use Kickflip\Models\SourcePageMetaData;
 use function collect;
 use function view;
 
-class SiteBuilder
+final class SiteBuilder
 {
     private SourcesLocator $sourcesLocator;
     /**
@@ -32,7 +31,7 @@ class SiteBuilder
     public function __construct(
         private bool $prettyUrls,
     ) {
-        $this->sourcesLocator = new SourcesLocator(KickflipHelper::sourcePath());
+        $this->sourcesLocator = app(SourcesLocator::class);
 
         $this->shikiNpmFetcher = app(ShikiNpmFetcher::class);
         if (!$this->shikiNpmFetcher->isShikiDownloaded()) {
@@ -42,6 +41,7 @@ class SiteBuilder
 
     public static function loadNav()
     {
+        app()->make(SourcesLocator::class); // This forces the singleton to be initialized, must be done after Pretty URL setting loaded
         # Load base nav config into state
         if (file_exists($navConfigPath = KickflipHelper::namedPath(CliStateDirPaths::NavigationFile))) {
             $navConfig = include $navConfigPath;

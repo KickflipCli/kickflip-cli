@@ -11,6 +11,7 @@ use Kickflip\KickflipHelper;
 use Kickflip\Logger;
 use Illuminate\Support\ServiceProvider;
 use Kickflip\SiteBuilder\ShikiNpmFetcher;
+use Kickflip\SiteBuilder\SourcesLocator;
 use Kickflip\View\Engine\BladeMarkdownEngine;
 use Kickflip\View\Engine\MarkdownEngine;
 use Spatie\LaravelMarkdown\MarkdownRenderer;
@@ -35,6 +36,7 @@ class KickflipServiceProvider extends ServiceProvider
         if (file_exists($configPath = $kickflipCliState->get('paths.config'))) {
             $config = include $configPath;
             $kickflipCliState->set('site', $config);
+            app('config')->set('app.url',$kickflipCliState->get('site.baseUrl'));
         }
 
         # Implement the kickflip level autoloading...
@@ -44,19 +46,21 @@ class KickflipServiceProvider extends ServiceProvider
         }
 
         $this->app->singleton(ShikiNpmFetcher::class, static fn() => new ShikiNpmFetcher());
-        $app = $this->app;
-        $this->app->singleton(BladeMarkdownEngine::class, static function() use ($app) {
+        $this->app->singleton(BladeMarkdownEngine::class, function($app) {
             return new BladeMarkdownEngine(
                 $app->get('blade.compiler'),
                 $app->get(Filesystem::class),
                 $app->get(MarkdownRenderer::class)
             );
         });
-        $this->app->singleton(MarkdownEngine::class, static function() use ($app) {
+        $this->app->singleton(MarkdownEngine::class, function($app) {
             return new MarkdownEngine(
                 $app->get(Filesystem::class),
                 $app->get(MarkdownRenderer::class)
             );
+        });
+        $this->app->singleton(SourcesLocator::class, function($app) {
+            return new SourcesLocator(KickflipHelper::sourcePath());
         });
     }
 
