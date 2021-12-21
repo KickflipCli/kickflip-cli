@@ -33,7 +33,7 @@ class BladeMarkdownEngine extends CompilerEngine
     public function get($path, array $data = [])
     {
         // First gets the file contents, then renders blade parts into string before returning
-        $contents = parent::get($path, $data);
+        $contents = parent::get($path, array_merge($data, $data['page']->getExtraData()));
         $renderedMarkdown = $this->markdown->convertToHtml($contents);
 
         /*
@@ -45,8 +45,8 @@ class BladeMarkdownEngine extends CompilerEngine
          * 2) any FrontMatter markdown without `autoExpand: false` passed,
          */
         if (
-            $this->autoExtendEnabled($data['site'], $data['page']) ||
-            $this->pageExtendEnabled($data['page'], $renderedMarkdown)
+            $this->isAutoExtendEnabled($data['site'], $data['page']) ||
+            $this->isPageExtendEnabled($data['page'], $renderedMarkdown)
         ) {
             return $this->makeView($data, $renderedMarkdown)->render();
         }

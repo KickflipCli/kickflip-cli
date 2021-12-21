@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Kickflip\Providers;
 
-use Composer\InstalledVersions;
 use Illuminate\Config\Repository;
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\View\Factory as ViewFactory;
@@ -15,9 +14,6 @@ use Kickflip\SiteBuilder\ShikiNpmFetcher;
 use Kickflip\View\Engine\BladeMarkdownEngine;
 use Kickflip\View\Engine\MarkdownEngine;
 use Spatie\LaravelMarkdown\MarkdownRenderer;
-use Symfony\Component\Process\Exception\ProcessFailedException;
-use Symfony\Component\Process\ExecutableFinder;
-use Symfony\Component\Process\Process;
 
 class KickflipServiceProvider extends ServiceProvider
 {
@@ -54,6 +50,20 @@ class KickflipServiceProvider extends ServiceProvider
         }
 
         $this->app->singleton(ShikiNpmFetcher::class, static fn() => new ShikiNpmFetcher());
+        $app = $this->app;
+        $this->app->singleton(BladeMarkdownEngine::class, static function() use ($app) {
+            return new BladeMarkdownEngine(
+                $app->get('blade.compiler'),
+                $app->get(Filesystem::class),
+                $app->get(MarkdownRenderer::class)
+            );
+        });
+        $this->app->singleton(MarkdownEngine::class, static function() use ($app) {
+            return new MarkdownEngine(
+                $app->get(Filesystem::class),
+                $app->get(MarkdownRenderer::class)
+            );
+        });
     }
 
     /**
@@ -108,12 +118,12 @@ class KickflipServiceProvider extends ServiceProvider
          */
         $view = $this->app->get('view');
         $view->addExtension('md', 'markdown', function () use ($app) {
-            return new MarkdownEngine($app->get(Filesystem::class), $app->get(MarkdownRenderer::class));
+            return $app->get(MarkdownEngine::class);
         });
         $view->addExtension('markdown', 'markdown');
 
         $view->addExtension('blade.md', 'blademd', function () use ($app) {
-            return new BladeMarkdownEngine($app->get('blade.compiler'), $app->get(Filesystem::class), $app->get(MarkdownRenderer::class));
+            return $app->get(BladeMarkdownEngine::class);
         });
         $view->addExtension('blade.markdown', 'blademd');
         $view->addExtension('md.blade.php', 'blademd');

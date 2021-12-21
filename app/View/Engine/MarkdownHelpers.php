@@ -8,22 +8,22 @@ use Illuminate\View\Factory;
 use Kickflip\Models\PageData;
 use Kickflip\Models\SiteData;
 use League\CommonMark\Extension\FrontMatter\Output\RenderedContentWithFrontMatter;
-use League\CommonMark\Output\RenderedContent;
+use League\CommonMark\Output\RenderedContentInterface;
 
 trait MarkdownHelpers
 {
-    public function autoExtendEnabled(SiteData $siteData, PageData $pageData): bool
+    public function isAutoExtendEnabled(SiteData $siteData, PageData $pageData): bool
     {
         return $siteData->autoExtendMarkdown === true && $pageData->autoExtend === true;
     }
 
-    public function pageExtendEnabled(PageData $pageData, $renderedMarkdown): bool
+    public function isPageExtendEnabled(PageData $pageData, $renderedMarkdown): bool
     {
         return $renderedMarkdown instanceof RenderedContentWithFrontMatter &&
                     $pageData->autoExtend === true;
     }
 
-    public function prepareExtendedRender($renderedMarkdown): array
+    public function prepareExtendedRender(RenderedContentInterface $renderedMarkdown): array
     {
         // Prepare view data based on which instance it is
         if ($renderedMarkdown instanceof RenderedContentWithFrontMatter) {
@@ -44,7 +44,7 @@ trait MarkdownHelpers
         ];
     }
 
-    public function makeView(array $data, RenderedContent $renderedMarkdown)
+    public function makeView(array $data, RenderedContentInterface $renderedMarkdown)
     {
         /**
          * @var Factory $viewFactory
