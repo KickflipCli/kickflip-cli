@@ -7,6 +7,10 @@
 
 TODO
 
+## Contributing
+
+See [the contribution guide](CONTRIBUTING.md)
+
 ## License
 
 Kickflip CLI is an open-source software licensed under the MIT [license](LICENSE.md).
