@@ -12,8 +12,9 @@ use Kickflip\KickflipHelper;
 use Kickflip\Logger;
 use Kickflip\SiteBuilder\SiteBuilder;
 use MallardDuck\LaravelTraits\Console\CommandManagesSections;
+use LaravelZero\Framework\Commands\Command;
 
-class BuildCommand extends BaseCommand
+class BuildCommand extends Command
 {
     use CommandManagesSections;
 
@@ -31,7 +32,7 @@ class BuildCommand extends BaseCommand
      *
      * @var string
      */
-    protected $description = 'Build your site.';
+    protected $description = 'Build your website project.';
 
     protected Factory $viewFactory;
 
@@ -61,11 +62,16 @@ class BuildCommand extends BaseCommand
          * @var bool $quiet
          */
         $quiet = filter_var($this->input->getOption('quiet'), FILTER_VALIDATE_BOOL);
+        # Set global state of pretty URL status
         $prettyUrls = filter_var($this->input->getOption('pretty'), FILTER_VALIDATE_BOOL);
+        $this->app->get('kickflipCli')->set('prettyUrls', $prettyUrls);
+
+        # Load in the global site nav
+        SiteBuilder::loadNav();
 
         # Load in the local projects config based on env...
-        $this->includeEnvironmentConfig($env);
-        $this->updateBuildPaths($env);
+        SiteBuilder::includeEnvironmentConfig($env);
+        SiteBuilder::updateBuildPaths($env);
 
         $buildDest = KickflipHelper::buildPath();
         if (
@@ -83,13 +89,5 @@ class BuildCommand extends BaseCommand
         $this->output->error("Done, did not build.");
 
         return static::FAILURE;
-    }
-
-    private function updateBuildPaths(string $env)
-    {
-        $buildDestinationBasePath = KickflipHelper::namedPath(CliStateDirPaths::BuildDestination);
-        $buildDestinationEnvPath = (string) Str::of($buildDestinationBasePath)->replaceEnv($env);
-        // TODO: decide if we need a views entry in here too...
-        $this->app->get('kickflipCli')->set('paths.build.destination', $buildDestinationEnvPath);
     }
 }

@@ -4,14 +4,19 @@ declare(strict_types=1);
 
 namespace Kickflip\SiteBuilder;
 
+use Illuminate\Config\Repository;
 use Illuminate\Console\OutputStyle;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\Str;
+use Kickflip\Enums\CliStateDirPaths;
 use Kickflip\Events\BaseEvent;
 use Kickflip\Events\SiteBuildComplete;
 use Kickflip\Events\SiteBuildStarted;
 use Kickflip\KickflipHelper;
 use Kickflip\Logger;
 use Kickflip\Models\PageData;
+use Kickflip\Models\SiteData;
 use function collect;
 use function view;
 
@@ -32,6 +37,48 @@ class SiteBuilder
         if (!$this->shikiNpmFetcher->isShikiDownloaded()) {
             $this->shikiNpmFetcher->installShiki();
         }
+    }
+
+    public static function loadNav()
+    {
+        # Load base nav config into state
+        if (file_exists($navConfigPath = KickflipHelper::namedPath(CliStateDirPaths::NavigationFile))) {
+            $navConfig = include $navConfigPath;
+            KickflipHelper::config()->set('siteNav', $navConfig);
+        }
+    }
+
+    public static function includeEnvironmentConfig(string $env)
+    {
+        /**
+         * @var Repository $kickflipCliState
+         */
+        $kickflipCliState = KickflipHelper::config();
+        $envConfigPath = (string) Str::of(KickflipHelper::namedPath(CliStateDirPaths::EnvConfig))->replaceEnv($env);
+        if (file_exists($envConfigPath)) {
+            $envSiteConfig = include $envConfigPath;
+            $kickflipCliState->set('site', array_merge($kickflipCliState->get('site'), $envSiteConfig));
+        }
+
+        // TODO: actually test this...
+        $envNavConfigPath = (string) Str::of(KickflipHelper::namedPath(CliStateDirPaths::EnvNavigationFile))->replaceEnv($env);
+        if (file_exists($envNavConfigPath)) {
+            $envNavConfig = include $envNavConfigPath;
+            $kickflipCliState->set('siteNav', array_merge($kickflipCliState->get('siteNav'), $envNavConfig));
+        }
+
+        View::share(
+            'site',
+            SiteData::fromConfig($kickflipCliState->get('site'), $kickflipCliState->get('siteNav'))
+        );
+    }
+
+    public static function updateBuildPaths(string $env)
+    {
+        $buildDestinationBasePath = KickflipHelper::namedPath(CliStateDirPaths::BuildDestination);
+        $buildDestinationEnvPath = (string) Str::of($buildDestinationBasePath)->replaceEnv($env);
+        // TODO: decide if we need a views entry in here too...
+        KickflipHelper::config()->set('paths.' . CliStateDirPaths::BuildDestination, $buildDestinationEnvPath);
     }
 
     public function build($consoleOutput): void
@@ -62,14 +109,13 @@ class SiteBuilder
                 return [$page->title, $page->url, $page->source->getFilename(), $page->source->getType()];
             })->toArray()
         );
+        /**
+         * @var PageData $page
+         */
         foreach ($renderPageList as $page) {
             $consoleOutput->writeln(sprintf('Rendering page from %s', $page->source->getFilename()));
             Logger::verbose("Building " . $page->source->getName() . ":" . $page->url . ":" . $page->title);
-            if ($this->prettyUrls) {
-                $outputFile = sprintf("%s/index.html", KickflipHelper::buildPath($page->url));
-            } else {
-                $outputFile = sprintf("%s.html", KickflipHelper::buildPath($page->url));
-            }
+            $outputFile = $page->getOutputPath($this->prettyUrls);
             $outputDir = dirname($outputFile);
             $view = view($page->source->getName(), [
                 'page' => $page
