@@ -1,15 +1,25 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Kickflip\SiteBuilder;
 
 use Composer\InstalledVersions;
+use Exception;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
-use Spatie\ShikiPhp\Shiki;
+use ReflectionClass;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\ExecutableFinder;
 use Symfony\Component\Process\Process;
+
+use function config;
+use function dirname;
+use function file_get_contents;
+use function json_decode;
+use function property_exists;
 
 /**
  * This class is responsible for fetching Shiki to ensure code highlighting always works
@@ -17,13 +27,16 @@ use Symfony\Component\Process\Process;
 final class ShikiNpmFetcher
 {
     private string $projectRootDirectory;
+    /**
+     * @var Filesystem|FilesystemAdapter
+     */
     private Filesystem $projectRootDirectoryFilesystem;
     private bool $isNpmUsedByProject;
 
     public function __construct()
     {
         // Determine the root folder based on the composer vendor dir in use.
-        $reflection = new \ReflectionClass(InstalledVersions::class);
+        $reflection = new ReflectionClass(InstalledVersions::class);
         $this->projectRootDirectory = dirname($reflection->getFileName(), 3);
         unset($reflection);
 
@@ -36,7 +49,7 @@ final class ShikiNpmFetcher
     }
 
     /**
-     * @throws \Exception
+     * @throws Exception
      */
     public function getProjectRootDirectory(): string
     {
@@ -51,8 +64,7 @@ final class ShikiNpmFetcher
     /**
      * Determine if NPM's package.json exists and if shiki is in either dependencies or devDependencies.
      *
-     * @return bool
-     * @throws \Exception
+     * @throws Exception
      */
     public function isShikiRequired(): bool
     {
@@ -64,36 +76,48 @@ final class ShikiNpmFetcher
         return $this->projectRootDirectoryFilesystem->exists('package.json') &&
             ($rootNpmPackages = json_decode(file_get_contents($this->getProjectRootDirectory() . '/package.json'))) &&
             (
-                property_exists($rootNpmPackages, 'dependencies') &&  property_exists($rootNpmPackages->dependencies, 'shiki')||
-                property_exists($rootNpmPackages, 'devDependencies') &&  property_exists($rootNpmPackages->devDependencies, 'shiki')
+                (
+                    property_exists($rootNpmPackages, 'dependencies') &&
+                    property_exists($rootNpmPackages->dependencies, 'shiki')
+                ) ||
+                (
+                    property_exists($rootNpmPackages, 'devDependencies') &&
+                    property_exists($rootNpmPackages->devDependencies, 'shiki')
+                )
             );
     }
 
     public function isShikiRequiredPackageLock(): bool
     {
         return $this->projectRootDirectoryFilesystem->exists('package-lock.json') &&
-            ($rootNpmPackageLock = json_decode(file_get_contents($this->getProjectRootDirectory() . '/package-lock.json'))) &&
+            ($rootNpmPackageLock = json_decode(
+                file_get_contents($this->getProjectRootDirectory() . '/package-lock.json'),
+            )) &&
             (
                 // V2 Package Lock
                 (
                     property_exists($rootNpmPackageLock, 'packages') &&
                     (
-                        property_exists($rootNpmPackageLock->packages->{''}, 'dependencies') && property_exists($rootNpmPackageLock->packages->{''}->dependencies, 'shiki') ||
-                        property_exists($rootNpmPackageLock->packages->{''}, 'devDependencies') && property_exists($rootNpmPackageLock->packages->{''}->devDependencies, 'shiki')
+                        property_exists($rootNpmPackageLock->packages->{''}, 'dependencies') &&
+                        property_exists($rootNpmPackageLock->packages->{''}->dependencies, 'shiki') ||
+                        property_exists($rootNpmPackageLock->packages->{''}, 'devDependencies') &&
+                        property_exists($rootNpmPackageLock->packages->{''}->devDependencies, 'shiki')
                     )
                 ) ||
                 // V1 Package Lock
                 (
-                    property_exists($rootNpmPackageLock, 'dependencies') &&  property_exists($rootNpmPackageLock->dependencies, 'shiki')||
-                    property_exists($rootNpmPackageLock, 'devDependencies') &&  property_exists($rootNpmPackageLock->devDependencies, 'shiki')
+                    property_exists($rootNpmPackageLock, 'dependencies') &&
+                    property_exists($rootNpmPackageLock->dependencies, 'shiki') ||
+                    property_exists($rootNpmPackageLock, 'devDependencies') &&
+                    property_exists($rootNpmPackageLock->devDependencies, 'shiki')
                 )
             );
     }
 
     /**
      * Determine if Shiki has been downloaded by NPM yet.
-     * @return bool
-     * @throws \Exception
+     *
+     * @throws Exception
      */
     public function isShikiDownloaded(): bool
     {
@@ -103,13 +127,15 @@ final class ShikiNpmFetcher
 
     /**
      * Run the NPM install command with shiki as a dependency.
+     *
      * @return string
-     * @throws \Exception
+     *
+     * @throws Exception
      */
     public function installShiki()
     {
         $command = [
-            (new ExecutableFinder)->find('npm', 'npm', [
+            (new ExecutableFinder())->find('npm', 'npm', [
                 '/usr/local/bin',
                 '/opt/homebrew/bin',
             ]),
@@ -135,8 +161,8 @@ final class ShikiNpmFetcher
 
     /**
      * Completely remove node_modules and package.json.
-     * @return string
-     * @throws \Exception
+     *
+     * @throws Exception
      */
     public function removeShikiAndNodeModules(): void
     {
@@ -150,7 +176,7 @@ final class ShikiNpmFetcher
                 $absolutePath = $this->projectRootDirectoryFilesystem->path($file);
                 if (File::isDirectory($absolutePath)) {
                     File::deleteDirectory($absolutePath);
-                } elseif(File::isFile($absolutePath)) {
+                } elseif (File::isFile($absolutePath)) {
                     File::delete($file);
                 }
             }

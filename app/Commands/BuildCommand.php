@@ -60,7 +60,7 @@ class BuildCommand extends Command
     public function handle()
     {
         Logger::setOutput($this->output);
-        [$env, $quiet, $prettyUrls] = $this->initCommandVars();
+        [$env, $quiet] = $this->initCommandVars();
 
         BeforeConfigurationLoads::dispatch();
         // Load in the local projects config based on env...
@@ -70,12 +70,12 @@ class BuildCommand extends Command
         $buildDest = KickflipHelper::buildPath();
         if (
             $quiet || !file_exists($buildDest) ||
-            (file_exists($buildDest) && $this->confirm('Overwrite "' . $buildDest . '"? '))
+            $this->confirm('Overwrite "' . $buildDest . '"? ')
         ) {
             File::ensureDirectoryExists($buildDest);
             File::cleanDirectory($buildDest);
             $this->output->writeln('<info>Starting site build...</info>');
-            $siteBuilder = new SiteBuilder($prettyUrls);
+            $siteBuilder = new SiteBuilder();
             $siteBuilder->build($this->output);
             $this->output->success('Completed building site.');
 
@@ -87,7 +87,7 @@ class BuildCommand extends Command
     }
 
     /**
-     * @return array{env: string, quiet:bool, prettyUrls: bool,}
+     * @return array{0: string, 1:bool, 2: bool,}
      *
      * @throws ContainerExceptionInterface
      * @throws NotFoundExceptionInterface

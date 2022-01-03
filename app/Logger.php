@@ -4,16 +4,18 @@ declare(strict_types=1);
 
 namespace Kickflip;
 
-use Illuminate\Console\OutputStyle;
-use Kickflip\Enums\ConsoleVerbosity;
 use Illuminate\Config\Repository;
-use Illuminate\Support\Str;
-use Illuminate\Support\Stringable;
+use Illuminate\Console\OutputStyle;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Kickflip\Enums\ConsoleVerbosity;
+
+use function app;
+use function microtime;
 
 class Logger
 {
-    private static OutputStyle $consoleOutput;
+    protected static OutputStyle $consoleOutput;
 
     public static function timing(string $methodName, ?string $static = null): void
     {
@@ -22,15 +24,14 @@ class Logger
          */
         $timingsRepo = app('kickflipTimings');
         $index = Str::of($methodName)->afterLast('\\')->replace('::', '.');
-        if (null !== $static) {
+        if ($static !== null) {
             $index = $index->replaceFirst(
                 '.',
-                Str::of($static)->afterLast('\\')->prepend('.extended.')->append('.')
+                Str::of($static)->afterLast('\\')->prepend('.extended.')->append('.'),
             );
         }
         $timingsRepo->set((string) $index, microtime(true));
     }
-
 
     public static function setOutput(OutputStyle $output)
     {
@@ -53,7 +54,10 @@ class Logger
      */
     public static function veryVerboseTable(array $headers, array $rows): void
     {
-        if (ConsoleVerbosity::veryVerbose() <= app('kickflipCli')->get('output.verbosity') && isset(static::$consoleOutput)) {
+        if (
+            ConsoleVerbosity::veryVerbose() <= app('kickflipCli')->get('output.verbosity') &&
+            isset(static::$consoleOutput)
+        ) {
             static::$consoleOutput->table($headers, $rows);
         }
     }
