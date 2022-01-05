@@ -27,6 +27,7 @@ use function file_exists;
 use function file_put_contents;
 use function is_dir;
 use function mkdir;
+use function rtrim;
 use function sprintf;
 use function view;
 
@@ -77,6 +78,12 @@ final class SiteBuilder
             $kickflipCliState->set('site.baseUrl', $baseUrl);
         }
         app('config')->set('app.url', $baseUrl);
+        if ($kickflipCliState->has('site.mixUrl')) {
+            $mixUrl = rtrim($kickflipCliState->get('site.mixUrl'), '/');
+        } else {
+            $mixUrl = rtrim($baseUrl, '/');
+        }
+        app('config')->set('app.mix_url', $mixUrl);
     }
 
     public static function updateBuildPaths(string $env): void

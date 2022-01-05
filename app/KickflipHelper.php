@@ -67,19 +67,21 @@ final class KickflipHelper
 
     public static function setPaths(string $basePath): void
     {
+        Application::$localBase = $basePath;
         $kickflipCliState = self::config();
+        $baseConfigPath = $basePath . DIRECTORY_SEPARATOR . 'config';
         $kickflipCliState->set('paths', [
             CliStateDirPaths::Base => $basePath,
-            CliStateDirPaths::Cache => $basePath . '/cache',
-            CliStateDirPaths::Resources => $basePath . '/resources',
-            CliStateDirPaths::Config => $basePath . '/config',
-            CliStateDirPaths::ConfigFile => $basePath . '/config/config.php',
-            CliStateDirPaths::EnvConfig => $basePath . '/config/config.{env}.php',
-            CliStateDirPaths::BootstrapFile => $basePath . '/config/bootstrap.php',
+            CliStateDirPaths::Cache => $basePath . DIRECTORY_SEPARATOR . 'cache',
+            CliStateDirPaths::Resources => $basePath . DIRECTORY_SEPARATOR . 'resources',
+            CliStateDirPaths::Config => $baseConfigPath,
+            CliStateDirPaths::ConfigFile => $baseConfigPath . DIRECTORY_SEPARATOR . 'config.php',
+            CliStateDirPaths::EnvConfig => $baseConfigPath . DIRECTORY_SEPARATOR . 'config.{env}.php',
+            CliStateDirPaths::BootstrapFile => $baseConfigPath . DIRECTORY_SEPARATOR . 'bootstrap.php',
             CliStateDirPaths::BuildBase => [
-                CliStateDirPaths::BuildSourcePart => $basePath . '/source',
-                CliStateDirPaths::EnvBuildDestinationPart => $basePath . '/build_{env}',
-                CliStateDirPaths::BuildDestinationPart => $basePath . '/build_{env}',
+                CliStateDirPaths::BuildSourcePart => $basePath . DIRECTORY_SEPARATOR . 'source',
+                CliStateDirPaths::EnvBuildDestinationPart => $basePath . DIRECTORY_SEPARATOR . 'build_{env}',
+                CliStateDirPaths::BuildDestinationPart => $basePath . DIRECTORY_SEPARATOR . 'build_{env}',
             ],
         ]);
 
@@ -119,14 +121,7 @@ final class KickflipHelper
      */
     public static function mix(string $path): HtmlString | string
     {
-        static $baseUrl;
-        if (is_null($baseUrl)) {
-            $baseUrl = self::config('site.baseUrl', '');
-        }
-
-        return new HtmlString(
-            $baseUrl . mix($path, 'assets/build'),
-        );
+        return mix($path, 'assets/build');
     }
 
     /**
@@ -189,7 +184,7 @@ final class KickflipHelper
 
     public static function leftTrimPath(string $path): string
     {
-        return ltrim($path, ' \\/');
+        return ltrim($path, ' .\\/');
     }
 
     public static function rightTrimPath(string $path): string
@@ -199,7 +194,7 @@ final class KickflipHelper
 
     public static function trimPath(string $path): string
     {
-        return rtrim(ltrim($path, ' \\/'), ' .\\/');
+        return rtrim(ltrim($path, ' .\\/'), ' .\\/');
     }
 
     public static function relativeUrl(string $url): string
