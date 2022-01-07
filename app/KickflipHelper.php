@@ -208,6 +208,11 @@ final class KickflipHelper
         return $pageData->source->getName();
     }
 
+    public static function pageUrl(PageData $pageData): string
+    {
+        return UrlHelper::getPageUrl($pageData);
+    }
+
     public static function relativeUrl(string $url): string
     {
         $baseUrl = self::config('site.baseUrl', null);
