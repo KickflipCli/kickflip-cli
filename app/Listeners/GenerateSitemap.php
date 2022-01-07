@@ -17,8 +17,6 @@ use function sprintf;
 use function str_replace;
 use function time;
 
-use const PHP_EOL;
-
 /**
  * This sitemap generator example works based on analyzing the output HTML files.
  * The listener here should be fired when \Kickflip\Events\SiteBuildComplete::class
@@ -46,13 +44,6 @@ final class GenerateSitemap
         $kickflipConfig = KickflipHelper::config();
         $baseUrl = $kickflipConfig->get('site.baseUrl');
         $outputBaseDir = $kickflipConfig->get('paths.build.destination');
-
-        if (! $baseUrl) {
-            echo PHP_EOL . "To generate a sitemap.xml file, please specify a 'baseUrl' in config.php." . PHP_EOL;
-
-            return;
-        }
-
         $sitemap = new Sitemap($outputBaseDir . '/sitemap.xml');
 
         collect($this->getOutputPaths((string) $outputBaseDir))
