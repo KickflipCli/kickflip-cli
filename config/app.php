@@ -51,7 +51,7 @@ return [
     |
     */
 
-    'env' => 'production',
+    'env' => env('APP_ENV', 'development'),
 
 
     /*
